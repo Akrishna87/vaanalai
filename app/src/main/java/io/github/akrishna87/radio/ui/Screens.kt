@@ -124,12 +124,12 @@ fun GenreScreen(vm: RadioViewModel, genre: Genre) {
             Row(Modifier.padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 FilterChip(
                     selected = !vm.genreWorldwide,
-                    onClick = { vm.setGenreWorldwide(false) },
+                    onClick = { vm.showGenreWorldwide(false) },
                     label = { Text(countryLabel(vm.countryCode)) },
                 )
                 FilterChip(
                     selected = vm.genreWorldwide,
-                    onClick = { vm.setGenreWorldwide(true) },
+                    onClick = { vm.showGenreWorldwide(true) },
                     label = { Text("🌍 Worldwide") },
                 )
             }
@@ -179,12 +179,12 @@ fun SearchScreen(vm: RadioViewModel) {
             Row(Modifier.padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 FilterChip(
                     selected = !vm.searchInCountry,
-                    onClick = { vm.setSearchInCountry(false) },
+                    onClick = { vm.searchOnlyInCountry(false) },
                     label = { Text("🌍 Everywhere") },
                 )
                 FilterChip(
                     selected = vm.searchInCountry,
-                    onClick = { vm.setSearchInCountry(true) },
+                    onClick = { vm.searchOnlyInCountry(true) },
                     label = { Text("Only ${countryLabel(vm.countryCode)}") },
                 )
             }

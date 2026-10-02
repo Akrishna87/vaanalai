@@ -339,7 +339,7 @@ class RadioViewModel(app: Application) : AndroidViewModel(app) {
         genreJob?.cancel()
     }
 
-    fun setGenreWorldwide(worldwide: Boolean) {
+    fun showGenreWorldwide(worldwide: Boolean) {
         if (genreWorldwide == worldwide) return
         genreWorldwide = worldwide
         loadGenre()
@@ -384,7 +384,7 @@ class RadioViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun setSearchInCountry(inCountry: Boolean) {
+    fun searchOnlyInCountry(inCountry: Boolean) {
         searchInCountry = inCountry
         runSearch()
     }
