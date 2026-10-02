@@ -65,7 +65,7 @@ echo "--- Opening the app"
 adb shell am start -W -n "$PKG/.MainActivity" > /dev/null
 sleep 8
 dump home
-on_screen home "Vaanoli" || fail "the app didn't open on Home"
+on_screen home "Vaanalai" || fail "the app didn't open on Home"
 shot 1-home
 # The directory is on the internet, so it's only checked, not required.
 for i in 1 2 3 4 5 6; do

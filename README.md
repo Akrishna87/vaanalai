@@ -1,11 +1,12 @@
-# 📻 Vaanoli (வானொலி): radio for Android
+# 📻 Vaanalai (வானலை): radio for Android
 
-Vaanoli plays live internet radio from around the world, including your own
+Vaanalai (*vaan*, sky + *alai*, wave: the Tamil word for the airwaves)
+plays live internet radio from around the world, including your own
 country's stations. The stations come from the free, community-run
 [Radio Browser](https://www.radio-browser.info) directory, which lists about
 50,000 of them. There are no ads, no account and no tracking.
 
-**Download:** the latest build is always the **Vaanoli.apk** file on the
+**Download:** the latest build is always the **Vaanalai.apk** file on the
 [`radio-latest` release](https://github.com/Akrishna87/Akrishna87/releases/tag/radio-latest).
 Open it on your phone and allow installing from your browser when asked.
 Each new build installs as an update over the last one.
@@ -35,7 +36,7 @@ Each new build installs as an update over the last one.
 - **Sleep timer** (moon icon on the full player): stops the radio after 15
   minutes to 2 hours, fading out gently.
 - **Android Auto**: browse Favourites, Recently played and Popular stations
-  from the car's screen, or say "play <station> on Vaanoli".
+  from the car's screen, or say "play <station> on Vaanalai".
 - A headphone or car **play** button brings back the last station even after
   the app was closed.
 - Dark and light themes follow the phone's setting.

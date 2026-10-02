@@ -102,7 +102,7 @@ class PlaybackService : MediaLibraryService() {
     override fun onCreate() {
         super.onCreate()
         val http = DefaultHttpDataSource.Factory()
-            .setUserAgent("Vaanoli/1.0 (Android)")
+            .setUserAgent("Vaanalai/1.0 (Android)")
             .setAllowCrossProtocolRedirects(true) // many stations redirect between http and https
             .setConnectTimeoutMs(15_000)
             .setReadTimeoutMs(20_000)
@@ -400,7 +400,7 @@ class PlaybackService : MediaLibraryService() {
             val single = mediaItems.singleOrNull()
             if (single != null && isCar(mediaSession, controller)) {
                 // A station picked in the car plays with the rest of its list; "Hey Google, play
-                // <station> on Vaanoli" searches the directory.
+                // <station> on Vaanalai" searches the directory.
                 val query = single.requestMetadata.searchQuery
                 return scope.future<MediaSession.MediaItemsWithStartPosition> {
                     val (list, at) = if (!query.isNullOrBlank()) {

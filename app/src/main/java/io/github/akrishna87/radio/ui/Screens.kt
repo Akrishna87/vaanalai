@@ -61,8 +61,8 @@ fun HomeScreen(vm: RadioViewModel) {
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column(Modifier.weight(1f)) {
-                    Text("Vaanoli", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-                    Text("வானொலி · radio from everywhere", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("Vaanalai", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+                    Text("வானலை · sky waves, radio from everywhere", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 AssistChip(
                     onClick = { vm.showCountries = true },

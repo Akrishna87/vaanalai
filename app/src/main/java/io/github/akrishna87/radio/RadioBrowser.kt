@@ -16,7 +16,7 @@ import java.util.Locale
  * stations). It runs on a few mirrors; if one is down the next is tried.
  */
 object RadioBrowser {
-    private const val USER_AGENT = "Vaanoli/1.0 (+https://github.com/Akrishna87/Akrishna87)"
+    private const val USER_AGENT = "Vaanalai/1.0 (+https://github.com/Akrishna87/Akrishna87)"
     private val FALLBACK_HOSTS = listOf(
         "de1.api.radio-browser.info",
         "de2.api.radio-browser.info",

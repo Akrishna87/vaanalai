@@ -44,7 +44,7 @@ object Logos {
             conn.connectTimeout = 8_000
             conn.readTimeout = 8_000
             conn.instanceFollowRedirects = true
-            conn.setRequestProperty("User-Agent", "Vaanoli/1.0 (Android)")
+            conn.setRequestProperty("User-Agent", "Vaanalai/1.0 (Android)")
             val code = conn.responseCode
             if (code in 300..399 && redirects < 3) {
                 val next = conn.getHeaderField("Location") ?: return null

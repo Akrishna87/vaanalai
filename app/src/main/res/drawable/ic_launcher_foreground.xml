@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Vaanoli launcher art: a broadcast tower sending out radio waves. -->
+<!-- Vaanalai launcher art: a broadcast tower sending out radio waves. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
     <path android:fillColor="#FFFFFF" android:pathData="M48,50 a6,6 0 1,0 12,0 a6,6 0 1,0 -12,0 z" />

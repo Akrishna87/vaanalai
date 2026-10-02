@@ -36,7 +36,7 @@ jobs:
           SIGNING_PASSPHRASE: ${{ secrets.SIGNING_PASSPHRASE }}
         run: |
           set -euo pipefail
-          # Vaanoli uses the same private key as Isaialai (see radio-android/README.md).
+          # Vaanalai uses the same private key as Isaialai (see radio-android/README.md).
           if [ -z "$SIGNING_PASSPHRASE" ]; then
             echo "::error::The SIGNING_PASSPHRASE secret is missing, so the APK can't be signed."
             exit 1
@@ -47,14 +47,14 @@ jobs:
           printf '%s' "$SIGNING_PASSPHRASE" | gpg --batch --quiet --pinentry-mode loopback --passphrase-fd 0 \
             --decrypt --output "$key" ../music-player-android/signing/release.keystore.gpg
           "$tools/zipalign" -p -f 4 app/build/outputs/apk/release/app-release-unsigned.apk aligned.apk
-          "$tools/apksigner" sign --in aligned.apk --out Vaanoli.apk \
+          "$tools/apksigner" sign --in aligned.apk --out Vaanalai.apk \
             --v4-signing-enabled false \
             --ks "$key" --ks-key-alias isaialai --ks-pass env:SIGNING_PASSPHRASE
-          "$tools/apksigner" verify --verbose --print-certs Vaanoli.apk | grep -E "Verified using|certificate DN"
+          "$tools/apksigner" verify --verbose --print-certs Vaanalai.apk | grep -E "Verified using|certificate DN"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: Vaanoli-apk
-          path: radio-android/Vaanoli.apk
+          name: Vaanalai-apk
+          path: radio-android/Vaanalai.apk
 
   smoke-test:
     needs: build
@@ -63,7 +63,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
-          name: Vaanoli-apk
+          name: Vaanalai-apk
           path: apk
       - name: Install ffmpeg (for the test stream)
         run: command -v ffmpeg || (sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg)
@@ -82,7 +82,7 @@ jobs:
           profile: pixel_6
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -no-boot-anim -camera-back none
-          script: bash radio-android/ci/smoke-test.sh apk/Vaanoli.apk smoke-out
+          script: bash radio-android/ci/smoke-test.sh apk/Vaanalai.apk smoke-out
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
         with:
@@ -100,7 +100,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
-          name: Vaanoli-apk
+          name: Vaanalai-apk
           path: out
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
@@ -112,8 +112,8 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           gh release delete radio-latest --cleanup-tag --yes || true
-          gh release create radio-latest out/Vaanoli.apk out/screens/*.png \
+          gh release create radio-latest out/Vaanalai.apk out/screens/*.png \
             --target "$GITHUB_SHA" \
             --prerelease \
-            --title "Vaanoli radio for Android (build ${{ github.run_number }})" \
-            --notes "Download **Vaanoli.apk** on your Android phone, open it, and allow installing from your browser when asked. Each new build installs as an update over the last one. The PNG files are screenshots from the automatic emulator test of this build."
+            --title "Vaanalai radio for Android (build ${{ github.run_number }})" \
+            --notes "Download **Vaanalai.apk** on your Android phone, open it, and allow installing from your browser when asked. Each new build installs as an update over the last one. The PNG files are screenshots from the automatic emulator test of this build."

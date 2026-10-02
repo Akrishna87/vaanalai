@@ -428,7 +428,7 @@ object StreamLinks {
             try {
                 conn.connectTimeout = 10_000
                 conn.readTimeout = 10_000
-                conn.setRequestProperty("User-Agent", "Vaanoli/1.0 (Android)")
+                conn.setRequestProperty("User-Agent", "Vaanalai/1.0 (Android)")
                 val text = conn.inputStream.bufferedReader().use { r ->
                     val buf = CharArray(64 * 1024)
                     val n = r.read(buf)
