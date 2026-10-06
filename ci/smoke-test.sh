@@ -10,7 +10,7 @@ APK="$1"
 OUT="$2"
 PKG=io.github.akrishna87.radio
 HERE="$(cd "$(dirname "$0")" && pwd)"
-FIND="$HERE/../../music-player-android/ci/find_text.py"
+FIND="$HERE/find_text.py"
 mkdir -p "$OUT"
 
 fail() {

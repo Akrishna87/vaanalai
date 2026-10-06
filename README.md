@@ -7,7 +7,7 @@ country's stations. The stations come from the free, community-run
 50,000 of them. There are no ads, no account and no tracking.
 
 **Download:** the latest build is always the **Vaanalai.apk** file on the
-[`radio-latest` release](https://github.com/Akrishna87/Akrishna87/releases/tag/radio-latest).
+[`radio-latest` release](https://github.com/Akrishna87/vaanalai/releases/tag/radio-latest).
 Open it on your phone and allow installing from your browser when asked.
 Each new build installs as an update over the last one.
 
@@ -64,11 +64,11 @@ built with JDK 17:
 ```
 
 CI (`.github/workflows/radio-apk.yml`) builds the release APK on every push
-that touches `radio-android/`, signs it, runs it on an Android 14 emulator
+to this repo, signs it, runs it on an Android 14 emulator
 (`ci/smoke-test.sh`), and publishes it to the `radio-latest` release with the
 emulator's screenshots.
 
 **Signing:** release builds are signed with Isaialai's private key
-(`music-player-android/signing/release.keystore.gpg`, unlocked in CI with the
+(`signing/release.keystore.gpg` (a copy of Isaialai's key), unlocked in CI with the
 `SIGNING_PASSPHRASE` secret), so no public key is ever used. See
-[`music-player-android/SECURITY.md`](../music-player-android/SECURITY.md).
+[Isaialai's SECURITY.md](https://github.com/Akrishna87/isaialai/blob/main/SECURITY.md).
