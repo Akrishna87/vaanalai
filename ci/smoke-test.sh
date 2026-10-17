@@ -29,8 +29,16 @@ dump() {
     # The emulator's own apps sometimes freeze while it warms up; wave the "isn't responding"
     # popup away so it doesn't cover the app.
     grep -q "isn&apos;t responding\|isn't responding" "$OUT/$1.xml" || return 0
-    echo "(dismissing a system 'isn't responding' popup)"
-    python3 "$FIND" "$OUT/$1.xml" "Wait" > /dev/null 2>&1 && adb shell input tap $(python3 "$FIND" "$OUT/$1.xml" "Wait")
+    # "Close app" ends the frozen app (usually the launcher) so the popup doesn't keep coming
+    # back; Android restarts it when it's needed. "Wait" is the fallback.
+    echo "(closing a system app that isn't responding)"
+    local button
+    for button in "Close app" "Wait"; do
+      if python3 "$FIND" "$OUT/$1.xml" "$button" exact > /dev/null 2>&1; then
+        adb shell input tap $(python3 "$FIND" "$OUT/$1.xml" "$button" exact)
+        break
+      fi
+    done
     sleep 3
   done
 }
@@ -59,6 +67,9 @@ trap 'kill $SERVER 2>/dev/null || true' EXIT
 
 adb wait-for-device
 adb install -r "$APK"
+# The emulator's launcher often freezes while it warms up and covers the app with an "isn't
+# responding" popup. It isn't needed while the app is on screen (Android restarts it on Home).
+adb shell am force-stop com.google.android.apps.nexuslauncher || true
 adb logcat -c
 
 echo "--- Opening the app"
