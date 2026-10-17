@@ -292,7 +292,7 @@ fun StationTile(station: Station, isCurrent: Boolean, isPlaying: Boolean, onClic
                 corner = 28.dp,
                 modifier = if (isCurrent) Modifier.border(BorderStroke(2.dp, Brand.Gradient), RoundedCornerShape(28.dp)) else Modifier,
             )
-            if (isCurrent) {
+            if (isCurrent && isPlaying) {
                 Box(
                     Modifier
                         .align(Alignment.BottomEnd)
