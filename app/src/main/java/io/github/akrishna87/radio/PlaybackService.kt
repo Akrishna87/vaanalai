@@ -22,7 +22,10 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.extractor.metadata.icy.IcyInfo
 import androidx.media3.extractor.metadata.id3.TextInformationFrame
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import androidx.media3.session.CommandButton
+import androidx.media3.session.DefaultMediaNotificationProvider
 import androidx.media3.session.LibraryResult
+import androidx.media3.session.MediaNotification
 import androidx.media3.session.MediaLibraryService
 import androidx.media3.session.MediaLibraryService.LibraryParams
 import androidx.media3.session.MediaLibraryService.MediaLibrarySession
@@ -110,6 +113,7 @@ class PlaybackService : MediaLibraryService() {
     override fun onCreate() {
         super.onCreate()
         WebsiteIcons.init(this)
+        setMediaNotificationProvider(LockScreenNotifications(this))
         val http = DefaultHttpDataSource.Factory()
             .setUserAgent("Vaanalai/1.0 (Android)")
             .setAllowCrossProtocolRedirects(true) // many stations redirect between http and https
@@ -527,5 +531,23 @@ class PlaybackService : MediaLibraryService() {
             if (list.isEmpty()) return Futures.immediateFailedFuture(UnsupportedOperationException("Nothing to resume"))
             return Futures.immediateFuture(MediaSession.MediaItemsWithStartPosition(list.map { it.toMediaItem() }, index, C.TIME_UNSET))
         }
+    }
+}
+
+/**
+ * The usual media notification, but allowed to show in full on a locked phone, so the station,
+ * the song and the play, pause and skip buttons work without unlocking.
+ */
+@OptIn(UnstableApi::class)
+private class LockScreenNotifications(context: android.content.Context) : DefaultMediaNotificationProvider(context) {
+    override fun createNotification(
+        mediaSession: MediaSession,
+        customLayout: com.google.common.collect.ImmutableList<CommandButton>,
+        actionFactory: MediaNotification.ActionFactory,
+        onNotificationChangedCallback: MediaNotification.Provider.Callback,
+    ): MediaNotification {
+        val n = super.createNotification(mediaSession, customLayout, actionFactory, onNotificationChangedCallback)
+        n.notification.visibility = android.app.Notification.VISIBILITY_PUBLIC
+        return n
     }
 }

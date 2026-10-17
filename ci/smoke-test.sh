@@ -69,6 +69,8 @@ trap 'kill $SERVER 2>/dev/null || true' EXIT
 
 adb wait-for-device
 adb install -r "$APK"
+# Answer the notification question up front, so its popup doesn't cover the screen.
+adb shell pm grant "$PKG" android.permission.POST_NOTIFICATIONS || true
 # The emulator's launcher often freezes while it warms up and covers the app with an "isn't
 # responding" popup. It isn't needed while the app is on screen (Android restarts it on Home).
 adb shell am force-stop com.google.android.apps.nexuslauncher || true
