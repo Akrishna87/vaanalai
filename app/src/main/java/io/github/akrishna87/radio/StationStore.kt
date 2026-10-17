@@ -25,6 +25,18 @@ class StationStore(context: Context) {
         prefs.edit().putString(KEY_FAVORITES, Station.listToJson(list)).apply()
     }
 
+    /** Saves changes to a station (e.g. its picture) wherever it's kept, without moving it. */
+    fun updateStation(station: Station) {
+        fun List<Station>.updated() = map { if (it.id == station.id) station else it }
+        val (queue, index) = lastQueue()
+        prefs.edit()
+            .putString(KEY_FAVORITES, Station.listToJson(favorites().updated()))
+            .putString(KEY_RECENTS, Station.listToJson(recents().updated()))
+            .putString(KEY_QUEUE, Station.listToJson(queue.updated()))
+            .putInt(KEY_QUEUE_INDEX, index)
+            .apply()
+    }
+
     fun moveFavorite(from: Int, to: Int) {
         val list = favorites().toMutableList()
         if (from !in list.indices || to !in list.indices) return

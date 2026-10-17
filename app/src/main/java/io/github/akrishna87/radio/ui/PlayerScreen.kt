@@ -70,10 +70,12 @@ fun PlayerScreen(vm: RadioViewModel) {
     }
     val sleepLeftMin = ((vm.sleepUntil - now + 59_999) / 60_000).takeIf { vm.sleepUntil > now }
 
-    // The station's colour: from its logo when it has a colourful one, otherwise from its name.
-    val logo = rememberLogo(station, 280.dp)
+    // The glow's colour: from the song's cover or the station's logo when colourful, else from its name.
+    val logo = rememberLogo(station, 272.dp)
+    val cover = rememberImage(vm.songArt, 272.dp)
+    val picture = cover ?: logo
     val (nameColor, nameColor2) = stationColors(station.name)
-    val accent = remember(logo) { logo?.let(Logos::accentColor)?.let { Color(it) } } ?: nameColor
+    val accent = remember(picture) { picture?.let(Logos::accentColor)?.let { Color(it) } } ?: nameColor
     val accent2 = if (accent == nameColor) nameColor2 else Brand.Violet
 
     Box(Modifier.fillMaxSize().background(Brand.Background)) {
@@ -106,8 +108,9 @@ fun PlayerScreen(vm: RadioViewModel) {
             }
 
             Spacer(Modifier.height(30.dp))
-            StationLogo(
+            NowPlayingArt(
                 station,
+                vm.songArt,
                 272.dp,
                 corner = 44.dp,
                 modifier = Modifier.shadow(48.dp, RoundedCornerShape(44.dp), ambientColor = accent, spotColor = accent),

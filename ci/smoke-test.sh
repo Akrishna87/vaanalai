@@ -61,7 +61,9 @@ echo "--- Serving a test stream to the emulator (10.0.2.2 is the CI machine)"
 STREAM_DIR="$OUT/stream"
 mkdir -p "$STREAM_DIR"
 ffmpeg -hide_banner -loglevel error -f lavfi -i "sine=frequency=440:duration=900" -ac 2 -b:a 96k "$STREAM_DIR/test.mp3"
-python3 -m http.server 8765 --directory "$STREAM_DIR" > "$OUT/http.log" 2>&1 &
+# Like a real station, it also sends the name of the song that's on.
+SONG="Daft Punk - Get Lucky"
+python3 "$HERE/icy_server.py" "$STREAM_DIR/test.mp3" 8765 "$SONG" > "$OUT/http.log" 2>&1 &
 SERVER=$!
 trap 'kill $SERVER 2>/dev/null || true' EXIT
 
@@ -136,13 +138,24 @@ echo "--- Playing it"
 tap favs2 "Smoke Test FM" exact
 wait_playing 30 || fail "the station didn't start playing"
 grep -q "test.mp3" "$OUT/http.log" || fail "the app didn't fetch the test stream"
+requests_at_start=$(grep -c "GET /test.mp3" "$OUT/http.log" || true)
 sleep 2
-dump playing
-tap playing "Live" # the mini player; opens the full player
+for i in $(seq 1 10); do dump playing; on_screen playing "Get Lucky" && break; sleep 2; done
+on_screen playing "Get Lucky" || fail "the song the station sent isn't shown"
+tap playing "Get Lucky" # the mini player; opens the full player
 sleep 2
 shot 4-player
 dump player
 on_screen player "Close player" || fail "the full player didn't open"
+# The song's album cover comes from Apple's iTunes search on the internet, so it's only checked.
+for i in $(seq 1 10); do on_screen player "Album cover" && break; sleep 2; dump player; done
+if on_screen player "Album cover"; then
+  echo "PASS: the song's album cover is shown"
+  [ "$(grep -c "GET /test.mp3" "$OUT/http.log" || true)" -eq "$requests_at_start" ] || fail "showing the cover restarted the stream"
+  shot 4-player
+else
+  echo "::warning::No album cover appeared for '$SONG' (is iTunes search reachable from the emulator?)"
+fi
 
 echo "--- Tapping LIVE jumps back to the live stream"
 before=$(grep -c "GET /test.mp3" "$OUT/http.log" || true)

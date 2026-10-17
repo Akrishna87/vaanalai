@@ -1,5 +1,8 @@
 package io.github.akrishna87.radio.ui
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.BorderStroke
@@ -28,6 +31,7 @@ import androidx.compose.material.icons.rounded.MoreHoriz
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -170,7 +174,7 @@ private fun NowPlayingCard(vm: RadioViewModel, station: Station) {
             .padding(14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        StationLogo(station, 64.dp, corner = 18.dp)
+        NowPlayingArt(station, vm.songArt, 64.dp, corner = 18.dp)
         Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -308,6 +312,14 @@ fun SearchScreen(vm: RadioViewModel) {
 @Composable
 fun FavoritesScreen(vm: RadioViewModel) {
     val favorites = vm.favorites
+    // Android's photo picker: no permission needed, and the app only sees the one picture chosen.
+    // Saved by id, so it survives Android recreating the screen while the picker is open.
+    var pickingFor by rememberSaveable { mutableStateOf<String?>(null) }
+    val pickPicture = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+        val station = vm.favorites.firstOrNull { it.id == pickingFor }
+        pickingFor = null
+        if (uri != null && station != null) vm.setStationImage(station, uri)
+    }
     LazyVerticalGrid(
         columns = GridCells.Adaptive(150.dp),
         modifier = Modifier.fillMaxSize(),
@@ -363,6 +375,17 @@ fun FavoritesScreen(vm: RadioViewModel) {
                         }
                         if (index < favorites.size - 1) {
                             DropdownMenuItem(text = { Text("Move down") }, onClick = { menu = false; vm.moveFavorite(index, index + 1) })
+                        }
+                        DropdownMenuItem(
+                            text = { Text("Choose picture") },
+                            onClick = {
+                                menu = false
+                                pickingFor = station.id
+                                pickPicture.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                            },
+                        )
+                        if (station.image.isNotEmpty()) {
+                            DropdownMenuItem(text = { Text("Remove picture") }, onClick = { menu = false; vm.clearStationImage(station) })
                         }
                         DropdownMenuItem(text = { Text("Remove from Favourites") }, onClick = { menu = false; vm.toggleFavorite(station) })
                     }

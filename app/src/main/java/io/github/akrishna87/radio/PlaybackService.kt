@@ -2,6 +2,7 @@ package io.github.akrishna87.radio
 
 import android.app.PendingIntent
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.os.Process
 import android.os.SystemClock
@@ -10,6 +11,7 @@ import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.ForwardingPlayer
 import androidx.media3.common.MediaItem
+import androidx.media3.common.MediaMetadata
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
@@ -59,6 +61,8 @@ class PlaybackService : MediaLibraryService() {
         /** Tries at reconnecting a station that dropped, before giving up and showing an error. */
         private const val MAX_RETRIES = 4
         private const val SLEEP_FADE_MS = 20_000L
+        /** Not a real song title: makes the first metadata of a new station refresh its picture. */
+        private const val NO_SONG_YET = "\u0000"
     }
 
     private var session: MediaLibrarySession? = null
@@ -76,6 +80,11 @@ class PlaybackService : MediaLibraryService() {
     private var playingSince = 0L
     private var pausedAt = 0L
     private var sleepJob: Job? = null
+    /** The song the station last said it was playing ([NO_SONG_YET] for a new station), and the lookup of its cover. */
+    private var lastSong: String? = NO_SONG_YET
+    private var coverJob: Job? = null
+    /** The station the last real move to a station was for (artwork updates don't count). */
+    private var lastStationId: String? = null
     /** Stations from the directory shown in the car, so a pick there can be played. */
     private var carPopular: List<Station> = emptyList()
 
@@ -99,6 +108,7 @@ class PlaybackService : MediaLibraryService() {
 
     override fun onCreate() {
         super.onCreate()
+        WebsiteIcons.init(this)
         val http = DefaultHttpDataSource.Factory()
             .setUserAgent("Vaanalai/1.0 (Android)")
             .setAllowCrossProtocolRedirects(true) // many stations redirect between http and https
@@ -163,6 +173,11 @@ class PlaybackService : MediaLibraryService() {
                     returningTo = C.INDEX_UNSET
                     return
                 }
+                // Swapping in a song's cover can look like a new item; it's still the same station.
+                if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_PLAYLIST_CHANGED && mediaItem?.mediaId == lastStationId) return
+                lastStationId = mediaItem?.mediaId
+                lastSong = NO_SONG_YET
+                coverJob?.cancel()
                 returningTo = C.INDEX_UNSET
                 hangUps = 0
                 retries = 0
@@ -173,6 +188,8 @@ class PlaybackService : MediaLibraryService() {
                 saveQueue()
                 scope.launch { RadioBrowser.countPlay(station.id) }
             }
+
+            override fun onMediaMetadataChanged(mediaMetadata: MediaMetadata) = showSongCover(mediaMetadata)
 
             override fun onPlayerError(error: PlaybackException) {
                 // Dropped connection or a station having a moment: try again a few times, waiting
@@ -187,6 +204,40 @@ class PlaybackService : MediaLibraryService() {
                 }
             }
         })
+    }
+
+    /**
+     * When the station says which song is on, show that song's album cover on the notification, lock
+     * screen and in the app; go back to the station's own picture between songs.
+     */
+    private fun showSongCover(metadata: MediaMetadata) {
+        val item = exo.currentMediaItem ?: return
+        val station = item.station() ?: return
+        val song = metadata.title?.toString()?.trim()?.takeIf { it.isNotEmpty() && it != station.name && it != "-" }
+        if (song == lastSong) return
+        lastSong = song
+        coverJob?.cancel()
+        if (song == null) {
+            setArtwork(station, station.artworkUrl())
+            return
+        }
+        coverJob = scope.launch {
+            val cover = CoverArt.find(song, station.name)
+            if (lastSong == song) setArtwork(station, cover ?: station.artworkUrl())
+        }
+    }
+
+    /** Changes the picture of the station playing now, without interrupting it. */
+    private fun setArtwork(station: Station, url: String?) {
+        val index = exo.currentMediaItemIndex
+        val item = exo.currentMediaItem ?: return
+        if (item.mediaId != station.id) return
+        val uri = url?.let(Uri::parse)
+        if (item.mediaMetadata.artworkUri == uri) return
+        val updated = item.buildUpon()
+            .setMediaMetadata(item.mediaMetadata.buildUpon().setArtworkUri(uri).build())
+            .build()
+        exo.replaceMediaItem(index, updated)
     }
 
     private fun reconnect() {

@@ -19,6 +19,8 @@ data class Station(
     val codec: String = "",
     val bitrate: Int = 0,
     val hls: Boolean = false,
+    /** A picture the user chose for this station (a file:// link inside the app), or "". */
+    val image: String = "",
 ) {
     /** Added by hand with a stream link, rather than found in the directory. */
     val isCustom: Boolean get() = id.startsWith(CUSTOM_PREFIX)
@@ -57,6 +59,7 @@ data class Station(
         put("codec", codec)
         put("bitrate", bitrate)
         put("hls", hls)
+        if (image.isNotEmpty()) put("image", image)
     }
 
     companion object {
@@ -80,6 +83,7 @@ data class Station(
                 codec = o.optString("codec"),
                 bitrate = o.optInt("bitrate"),
                 hls = o.optBoolean("hls"),
+                image = o.optString("image").takeIf { it.startsWith("file://") }.orEmpty(),
             )
         }
 

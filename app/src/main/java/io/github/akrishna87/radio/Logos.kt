@@ -51,6 +51,31 @@ object Logos {
         return best.takeIf { bestScore > 0.3f }
     }
 
+    /** The station's picture if it's already loaded: the user's own, the directory's, or its website's. */
+    fun cachedFor(station: Station): Bitmap? =
+        listOfNotNull(station.image.ifEmpty { null }, station.favicon.ifEmpty { null }, WebsiteIcons.known(station.homepage))
+            .firstNotNullOfOrNull { cache.get(it) }
+
+    /**
+     * The station's picture: the one the user chose, else the directory's logo, else a logo from the
+     * station's own website (found once, then remembered).
+     */
+    suspend fun loadFor(station: Station, sizePx: Int): Bitmap? {
+        station.image.takeIf { it.isNotEmpty() }?.let { url -> load(url, sizePx)?.let { return it } }
+        station.favicon.takeIf { it.isNotBlank() }?.let { url -> load(url, sizePx)?.let { return it } }
+        val homepage = station.homepage
+        if (!(homepage.startsWith("https://") || homepage.startsWith("http://"))) return null
+        WebsiteIcons.known(homepage)?.let { url -> load(url, sizePx)?.let { return it } }
+        if (WebsiteIcons.knownMissing(homepage)) return null
+        for (candidate in WebsiteIcons.candidates(homepage)) {
+            val bitmap = load(candidate, sizePx) ?: continue
+            WebsiteIcons.remember(homepage, candidate)
+            return bitmap
+        }
+        WebsiteIcons.remember(homepage, null)
+        return null
+    }
+
     suspend fun load(url: String, sizePx: Int): Bitmap? {
         if (url.isBlank() || url in failed) return null
         cache.get(url)?.let { return it }
@@ -62,6 +87,11 @@ object Logos {
     }
 
     private fun download(url: String, sizePx: Int): Bitmap? {
+        if (url.startsWith("file://")) {
+            val file = java.io.File(android.net.Uri.parse(url).path ?: return null)
+            if (!file.isFile || file.length() > MAX_BYTES) return null
+            return decode(file.readBytes(), sizePx)
+        }
         if (!(url.startsWith("https://") || url.startsWith("http://"))) return null
         var conn = URL(url).openConnection() as HttpURLConnection
         var redirects = 0
@@ -97,6 +127,11 @@ object Logos {
         } finally {
             conn.disconnect()
         }
+        return decode(bytes, sizePx)
+    }
+
+    /** Decodes an image, shrunk to about [sizePx]; null if it isn't one, or is too small to look good. */
+    fun decode(bytes: ByteArray, sizePx: Int): Bitmap? {
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
         if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null

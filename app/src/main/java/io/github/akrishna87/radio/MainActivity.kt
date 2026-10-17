@@ -16,6 +16,7 @@ class MainActivity : ComponentActivity() {
             navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
         )
         super.onCreate(savedInstanceState)
+        WebsiteIcons.init(this)
         setContent {
             RadioTheme {
                 RadioApp()
