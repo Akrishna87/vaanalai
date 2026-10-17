@@ -25,6 +25,32 @@ object Logos {
 
     fun hasFailed(url: String): Boolean = url in failed
 
+    /**
+     * The logo's most vivid colour (as an ARGB int), for tinting the player; null when the logo is
+     * all greys, black or white.
+     */
+    fun accentColor(bitmap: Bitmap): Int? {
+        val small = Bitmap.createScaledBitmap(bitmap, 24, 24, true)
+        val hsv = FloatArray(3)
+        var best: Int? = null
+        var bestScore = 0f
+        for (y in 0 until small.height) {
+            for (x in 0 until small.width) {
+                val c = small.getPixel(x, y)
+                if (android.graphics.Color.alpha(c) < 128) continue
+                android.graphics.Color.colorToHSV(c, hsv)
+                if (hsv[2] < 0.25f || hsv[2] > 0.98f && hsv[1] < 0.1f) continue
+                val score = hsv[1] * (0.5f + hsv[2] / 2)
+                if (score > bestScore) {
+                    bestScore = score
+                    best = c
+                }
+            }
+        }
+        if (small !== bitmap) small.recycle()
+        return best.takeIf { bestScore > 0.3f }
+    }
+
     suspend fun load(url: String, sizePx: Int): Bitmap? {
         if (url.isBlank() || url in failed) return null
         cache.get(url)?.let { return it }

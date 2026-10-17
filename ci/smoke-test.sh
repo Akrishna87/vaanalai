@@ -79,7 +79,7 @@ else
 fi
 
 echo "--- Browsing a genre"
-tap home "News" exact
+tap home "Tamil" exact
 sleep 6
 dump genre
 on_screen genre "Back" || fail "the genre page didn't open"
