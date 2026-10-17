@@ -39,7 +39,9 @@ Each new build installs as an update over the last one.
   from the car's screen, or say "play <station> on Vaanalai".
 - A headphone or car **play** button brings back the last station even after
   the app was closed.
-- Dark and light themes follow the phone's setting.
+- A dark, neon look: gradient genre tiles, glowing cards, and a full player that
+  takes its colours from the station's logo, with a dancing visualiser and a
+  **Share** button to send a station to friends.
 
 ## A few honest notes
 

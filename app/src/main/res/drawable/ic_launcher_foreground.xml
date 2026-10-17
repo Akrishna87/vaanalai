@@ -1,12 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Vaanalai launcher art: a broadcast tower sending out radio waves. -->
+<!-- Vaanalai launcher art: a wave across the sky (வான் + அலை), with sparkles above it. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
-    <path android:fillColor="#FFFFFF" android:pathData="M48,50 a6,6 0 1,0 12,0 a6,6 0 1,0 -12,0 z" />
-    <path android:strokeColor="#FFFFFF" android:strokeWidth="5" android:strokeLineCap="round" android:strokeLineJoin="round"
-        android:pathData="M54,56 L45,81 M54,56 L63,81 M48.5,72 L59.5,72" />
-    <path android:strokeColor="#FFFFFF" android:strokeWidth="5" android:strokeLineCap="round"
-        android:pathData="M66,38 A17,17 0 0,1 66,62 M42,38 A17,17 0 0,0 42,62" />
-    <path android:strokeColor="#FFFFFF" android:strokeWidth="5" android:strokeLineCap="round"
-        android:pathData="M73.8,30.2 A28,28 0 0,1 73.8,69.8 M34.2,30.2 A28,28 0 0,0 34.2,69.8" />
+    <path android:strokeColor="#FFFFFF" android:strokeWidth="8" android:strokeLineCap="round" android:strokeLineJoin="round"
+        android:pathData="M30,62 C35,50 40.5,50 45.5,62 S56,74 61,62 S72,50 78,60" />
+    <path android:fillColor="#D9FF3D"
+        android:pathData="M68,27 Q69.5,35.5 78,37 Q69.5,38.5 68,47 Q66.5,38.5 58,37 Q66.5,35.5 68,27 Z" />
+    <path android:fillColor="#FFFFFF" android:fillAlpha="0.85"
+        android:pathData="M41,33 Q41.7,36.8 45.5,37.5 Q41.7,38.2 41,42 Q40.3,38.2 36.5,37.5 Q40.3,36.8 41,33 Z" />
+    <path android:fillColor="#FFFFFF" android:fillAlpha="0.7"
+        android:pathData="M75.5,75 a2.6,2.6 0 1,0 5.2,0 a2.6,2.6 0 1,0 -5.2,0 z" />
 </vector>

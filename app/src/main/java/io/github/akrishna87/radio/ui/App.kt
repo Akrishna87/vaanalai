@@ -4,7 +4,11 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -24,10 +28,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.akrishna87.radio.RadioViewModel
@@ -44,13 +52,18 @@ fun RadioApp(vm: RadioViewModel = viewModel()) {
     BackHandler(enabled = !vm.showPlayer && vm.genre != null) { vm.closeGenre() }
     BackHandler(enabled = !vm.showPlayer && vm.genre == null && vm.tab != Tab.HOME) { vm.tab = Tab.HOME }
 
-    Box(Modifier.fillMaxSize()) {
+    Box(Modifier.fillMaxSize().background(Brand.Background)) {
         Scaffold(
-            snackbarHost = { SnackbarHost(snackbar) },
+            containerColor = Brand.Background,
+            snackbarHost = {
+                SnackbarHost(snackbar) { data ->
+                    Snackbar(data, containerColor = Brand.Surface2, contentColor = Brand.Text, actionColor = Brand.Lime, dismissActionContentColor = Brand.SubText, shape = RoundedCornerShape(18.dp))
+                }
+            },
             bottomBar = {
-                Column {
+                Column(Modifier.background(Brush.verticalGradient(listOf(Color.Transparent, Brand.Background.copy(alpha = 0.92f), Brand.Background)))) {
                     if (vm.current != null) MiniPlayer(vm)
-                    NavigationBar {
+                    NavigationBar(containerColor = Color.Transparent, tonalElevation = 0.dp) {
                         Tab.entries.forEach { tab ->
                             val selected = vm.tab == tab && vm.genre == null
                             NavigationBarItem(
@@ -69,7 +82,14 @@ fun RadioApp(vm: RadioViewModel = viewModel()) {
                                         contentDescription = null,
                                     )
                                 },
-                                label = { Text(tab.label) },
+                                label = { Text(tab.label, fontWeight = if (selected) FontWeight.ExtraBold else FontWeight.Medium) },
+                                colors = NavigationBarItemDefaults.colors(
+                                    selectedIconColor = Color.Black,
+                                    selectedTextColor = Brand.Text,
+                                    indicatorColor = Brand.Lime,
+                                    unselectedIconColor = Brand.SubText,
+                                    unselectedTextColor = Brand.SubText,
+                                ),
                             )
                         }
                     }
@@ -101,60 +121,67 @@ fun RadioApp(vm: RadioViewModel = viewModel()) {
     if (vm.showSleep) SleepDialog(vm)
 }
 
-/** What's playing, above the tabs; tap to open the full player. */
+/** What's playing, floating above the tabs; tap to open the full player. */
 @Composable
 private fun MiniPlayer(vm: RadioViewModel) {
     val station = vm.current ?: return
-    Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh) {
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .clickable { vm.showPlayer = true }
-                .padding(start = 12.dp, end = 4.dp, top = 8.dp, bottom = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            StationLogo(station, 44.dp, corner = 8.dp)
-            Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f)) {
-                Text(station.name, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    val (c1, _) = stationColors(station.name)
+    val shape = RoundedCornerShape(24.dp)
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 6.dp)
+            .shadow(16.dp, shape, ambientColor = c1, spotColor = c1)
+            .clip(shape)
+            .background(Brush.horizontalGradient(listOf(c1.copy(alpha = 0.35f), Brand.Surface2, Brand.Surface2)))
+            .border(BorderStroke(1.dp, Color.White.copy(alpha = 0.10f)), shape)
+            .clickable { vm.showPlayer = true }
+            .padding(start = 8.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        StationLogo(station, 46.dp, corner = 14.dp)
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            Text(station.name, style = MaterialTheme.typography.titleSmall, color = Brand.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (vm.isPlaying) {
+                    PlayingBars(height = 10.dp)
+                    Spacer(Modifier.width(6.dp))
+                }
                 Text(
                     statusText(vm),
                     style = MaterialTheme.typography.bodySmall,
-                    color = if (vm.error != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = if (vm.error != null) MaterialTheme.colorScheme.error else Brand.SubText,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
             }
-            PlayPauseButton(vm, Modifier.size(48.dp))
         }
+        Spacer(Modifier.width(8.dp))
+        GradientPlayButton(vm, 46.dp)
     }
 }
 
+/** The round gradient play/pause button; shows a spinner while connecting. */
 @Composable
-fun PlayPauseButton(vm: RadioViewModel, modifier: Modifier = Modifier, big: Boolean = false) {
+fun GradientPlayButton(vm: RadioViewModel, size: Dp, modifier: Modifier = Modifier) {
     val playing = vm.playWhenReady && vm.error == null
-    val label = if (playing) "Pause" else "Play"
-    if (big) {
-        FilledIconButton(onClick = vm::togglePlay, modifier = modifier) {
-            PlayPauseIcon(vm, playing, label, Modifier.size(40.dp))
-        }
-    } else {
-        IconButton(onClick = vm::togglePlay, modifier = modifier) {
-            PlayPauseIcon(vm, playing, label, Modifier.size(30.dp))
-        }
-    }
-}
-
-@Composable
-private fun PlayPauseIcon(vm: RadioViewModel, playing: Boolean, label: String, modifier: Modifier) {
-    Box(contentAlignment = Alignment.Center) {
+    Box(
+        modifier
+            .size(size)
+            .clip(CircleShape)
+            .background(Brand.Gradient)
+            .clickable(onClick = vm::togglePlay),
+        contentAlignment = Alignment.Center,
+    ) {
         if (vm.isLoading) {
-            CircularProgressIndicator(modifier, strokeWidth = 2.5.dp, color = LocalContentColor.current)
+            CircularProgressIndicator(Modifier.size(size * 0.62f), strokeWidth = 2.5.dp, color = Color.White)
         }
         Icon(
             if (playing) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
-            contentDescription = label,
-            modifier = if (vm.isLoading) Modifier.size(20.dp) else modifier,
+            contentDescription = if (playing) "Pause" else "Play",
+            tint = Color.White,
+            modifier = Modifier.size(if (vm.isLoading) size * 0.3f else size * 0.55f),
         )
     }
 }
@@ -177,12 +204,12 @@ private fun CountryPicker(vm: RadioViewModel) {
     ModalBottomSheet(
         onDismissRequest = { vm.showCountries = false },
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        containerColor = Brand.Surface,
     ) {
         Column(Modifier.fillMaxWidth().fillMaxHeight(0.9f)) {
             Text(
                 "Stations from",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.SemiBold,
+                style = MaterialTheme.typography.headlineSmall,
                 modifier = Modifier.padding(horizontal = 20.dp),
             )
             OutlinedTextField(
@@ -191,7 +218,7 @@ private fun CountryPicker(vm: RadioViewModel) {
                 placeholder = { Text("Find a country") },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-                shape = RoundedCornerShape(14.dp),
+                shape = CircleShape,
             )
             val shown = vm.countries.filter { filter.isBlank() || it.name.contains(filter.trim(), ignoreCase = true) }
             LazyColumn(Modifier.fillMaxWidth().weight(1f)) {
@@ -229,8 +256,8 @@ private fun CountryRow(label: String, detail: String?, selected: Boolean, onClic
             label,
             modifier = Modifier.weight(1f),
             style = MaterialTheme.typography.bodyLarge,
-            color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+            color = if (selected) Brand.Lime else Brand.Text,
+            fontWeight = if (selected) FontWeight.ExtraBold else FontWeight.Normal,
         )
         if (detail != null) Text(detail, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
@@ -250,7 +277,9 @@ private fun AddStationDialog(vm: RadioViewModel) {
     }
     AlertDialog(
         onDismissRequest = { if (!saving) vm.showAddStation = false },
-        title = { Text("Add a station") },
+        containerColor = Brand.Surface2,
+        shape = RoundedCornerShape(28.dp),
+        title = { Text("Add a station", fontWeight = FontWeight.ExtraBold) },
         text = {
             Column {
                 Text(
@@ -303,7 +332,9 @@ private fun SleepDialog(vm: RadioViewModel) {
     val active = vm.sleepUntil > System.currentTimeMillis()
     AlertDialog(
         onDismissRequest = { vm.showSleep = false },
-        title = { Text("Sleep timer") },
+        containerColor = Brand.Surface2,
+        shape = RoundedCornerShape(28.dp),
+        title = { Text("Sleep timer 🌙", fontWeight = FontWeight.ExtraBold) },
         text = {
             Column {
                 Text(
