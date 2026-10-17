@@ -47,15 +47,56 @@ import io.github.akrishna87.radio.Station
 import io.github.akrishna87.radio.StationList
 import kotlin.math.absoluteValue
 
-/** The station's logo bitmap, loading it if need be; null while loading or when it has none. */
+/** The station's picture, loading it if need be (see [Logos.loadFor]); null while loading or when it has none. */
 @Composable
 fun rememberLogo(station: Station, size: Dp): Bitmap? {
     val px = with(LocalDensity.current) { size.roundToPx() }.coerceAtMost(512)
-    var bitmap by remember(station.favicon) { mutableStateOf(Logos.cached(station.favicon)) }
-    LaunchedEffect(station.favicon) {
-        if (bitmap == null && station.favicon.isNotBlank()) bitmap = Logos.load(station.favicon, px)
+    val key = station.image + "|" + station.favicon + "|" + station.homepage
+    var bitmap by remember(key) { mutableStateOf(Logos.cachedFor(station)) }
+    LaunchedEffect(key) {
+        if (bitmap == null) bitmap = Logos.loadFor(station, px)
     }
     return bitmap
+}
+
+/** Any picture by its link (e.g. a song's cover); null while loading or if it can't be loaded. */
+@Composable
+fun rememberImage(url: String?, size: Dp): Bitmap? {
+    val px = with(LocalDensity.current) { size.roundToPx() }.coerceAtMost(800)
+    var bitmap by remember(url) { mutableStateOf(url?.let(Logos::cached)) }
+    LaunchedEffect(url) {
+        if (bitmap == null && url != null) bitmap = Logos.load(url, px)
+    }
+    return bitmap
+}
+
+/**
+ * The song's album cover when there is one, with the station's logo in a corner; otherwise the
+ * station's logo.
+ */
+@Composable
+fun NowPlayingArt(station: Station, songArt: String?, size: Dp, modifier: Modifier = Modifier, corner: Dp = size / 4) {
+    val cover = rememberImage(songArt, size)
+    if (cover == null) {
+        StationLogo(station, size, modifier, corner)
+        return
+    }
+    Box(modifier.size(size)) {
+        Image(
+            bitmap = cover.asImageBitmap(),
+            contentDescription = "Album cover",
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(corner)),
+        )
+        if (size >= 120.dp) {
+            StationLogo(
+                station,
+                size / 5,
+                Modifier.align(Alignment.BottomStart).padding(size / 22),
+                corner = size / 20,
+            )
+        }
+    }
 }
 
 /** Two colours picked from the station's name, for logo placeholders and the player's glow. */
@@ -78,11 +119,13 @@ fun StationLogo(station: Station, size: Dp, modifier: Modifier = Modifier, corne
         contentAlignment = Alignment.Center,
     ) {
         if (bitmap != null) {
+            // A photo the user picked fills the square; logos sit inside it with a little margin.
+            val ownPicture = station.image.isNotEmpty()
             Image(
                 bitmap = bitmap.asImageBitmap(),
                 contentDescription = null,
-                contentScale = ContentScale.Fit,
-                modifier = Modifier.fillMaxSize().padding(size / 14),
+                contentScale = if (ownPicture) ContentScale.Crop else ContentScale.Fit,
+                modifier = if (ownPicture) Modifier.fillMaxSize() else Modifier.fillMaxSize().padding(size / 14),
             )
         } else {
             Text(

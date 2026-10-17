@@ -19,7 +19,7 @@ fun Station.description(): String =
 fun Station.toMediaItem(): MediaItem {
     val json = toJson().toString()
     val extras = Bundle().apply { putString(EXTRA_STATION, json) }
-    val art = favicon.takeIf { it.startsWith("https://") || it.startsWith("http://") }?.let(Uri::parse)
+    val art = artworkUrl()?.let(Uri::parse)
     return MediaItem.Builder()
         .setMediaId(id)
         .setUri(url)

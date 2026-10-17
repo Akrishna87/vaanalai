@@ -24,10 +24,10 @@ jobs:
           distribution: temurin
           java-version: "17"
       - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4.4.3
-      - name: Build the APK
+      - name: Build the APK and run the unit tests
         env:
           VERSION_CODE: ${{ github.run_number }}
-        run: ./gradlew --no-daemon --stacktrace assembleRelease
+        run: ./gradlew --no-daemon --stacktrace assembleRelease testReleaseUnitTest
       - name: Sign with Isaialai's private key
         env:
           SIGNING_PASSPHRASE: ${{ secrets.SIGNING_PASSPHRASE }}

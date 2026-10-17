@@ -29,7 +29,13 @@ Each new build installs as an update over the last one.
 - **Plays in the background**, with controls in the notification, on the
   lock screen, and from Bluetooth headphones and the car. **Previous / Next**
   move to the previous or next station in the list you picked from.
-- **Shows the song that's on**, when the station sends song titles.
+- **Shows the song that's on**, when the station sends song titles, with the
+  song's **album cover** on the player, the notification and the lock screen
+  (looked up on Apple's free iTunes search; only the song's name is sent).
+  Between songs it goes back to the station's picture.
+- **Station logos**: from the directory, or, when that's missing or blurry,
+  from the station's own website. For any favourite you can also pick your own
+  picture from the phone (⋮ → **Choose picture**; no permission needed).
 - **Reconnects by itself** when the connection drops or the station's server
   hangs up. Pressing play after a pause goes back to what's on air now
   instead of playing old audio, and tapping **LIVE** on the full player jumps

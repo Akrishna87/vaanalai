@@ -2,6 +2,7 @@ package io.github.akrishna87.radio
 
 import android.app.PendingIntent
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.os.Process
 import android.os.SystemClock
@@ -10,12 +11,16 @@ import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.ForwardingPlayer
 import androidx.media3.common.MediaItem
+import androidx.media3.common.MediaMetadata
+import androidx.media3.common.Metadata
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.extractor.metadata.icy.IcyInfo
+import androidx.media3.extractor.metadata.id3.TextInformationFrame
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.session.LibraryResult
 import androidx.media3.session.MediaLibraryService
@@ -76,6 +81,11 @@ class PlaybackService : MediaLibraryService() {
     private var playingSince = 0L
     private var pausedAt = 0L
     private var sleepJob: Job? = null
+    /** The song the station last said it was playing, and the lookup of its cover. */
+    private var lastSong: String? = null
+    private var coverJob: Job? = null
+    /** The station the last real move to a station was for (artwork updates don't count). */
+    private var lastStationId: String? = null
     /** Stations from the directory shown in the car, so a pick there can be played. */
     private var carPopular: List<Station> = emptyList()
 
@@ -99,6 +109,7 @@ class PlaybackService : MediaLibraryService() {
 
     override fun onCreate() {
         super.onCreate()
+        WebsiteIcons.init(this)
         val http = DefaultHttpDataSource.Factory()
             .setUserAgent("Vaanalai/1.0 (Android)")
             .setAllowCrossProtocolRedirects(true) // many stations redirect between http and https
@@ -163,6 +174,11 @@ class PlaybackService : MediaLibraryService() {
                     returningTo = C.INDEX_UNSET
                     return
                 }
+                // Swapping in a song's cover can look like a new item; it's still the same station.
+                if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_PLAYLIST_CHANGED && mediaItem?.mediaId == lastStationId) return
+                lastStationId = mediaItem?.mediaId
+                lastSong = null
+                coverJob?.cancel()
                 returningTo = C.INDEX_UNSET
                 hangUps = 0
                 retries = 0
@@ -172,6 +188,12 @@ class PlaybackService : MediaLibraryService() {
                 store.addRecent(station)
                 saveQueue()
                 scope.launch { RadioBrowser.countPlay(station.id) }
+            }
+
+            // Song names sent inside the stream. (The player itself prefers the item's own title, the
+            // station's name, so they have to be picked out here.)
+            override fun onMetadata(metadata: Metadata) {
+                songIn(metadata)?.let { showSong(it.ifBlank { null }) }
             }
 
             override fun onPlayerError(error: PlaybackException) {
@@ -187,6 +209,60 @@ class PlaybackService : MediaLibraryService() {
                 }
             }
         })
+    }
+
+    /**
+     * The song named in a piece of stream metadata: "" when the station says nothing is named,
+     * null when the metadata isn't about the song at all.
+     */
+    private fun songIn(metadata: Metadata): String? {
+        var title: String? = null
+        var artist: String? = null
+        for (i in 0 until metadata.length()) {
+            when (val entry = metadata.get(i)) {
+                is IcyInfo -> return entry.title?.trim().orEmpty() // Shoutcast/Icecast: "Artist - Title"
+                is TextInformationFrame -> when (entry.id) { // HLS: ID3 tags
+                    "TIT2" -> title = entry.values.firstOrNull()?.trim()
+                    "TPE1" -> artist = entry.values.firstOrNull()?.trim()
+                }
+            }
+        }
+        if (title == null && artist == null) return null
+        return listOfNotNull(artist?.ifEmpty { null }, title?.ifEmpty { null }).joinToString(" - ")
+    }
+
+    /**
+     * Shows what the station says is on: the song as the title with the station under it on the
+     * notification and lock screen, and the song's album cover once found. Between songs, the
+     * station's own name and picture come back.
+     */
+    private fun showSong(name: String?) {
+        val item = exo.currentMediaItem ?: return
+        val station = item.station() ?: return
+        val song = name?.takeIf { it != station.name && it != "-" && it.length > 1 }
+        if (song == lastSong) return
+        lastSong = song
+        coverJob?.cancel()
+        updateItem(station, song, station.artworkUrl())
+        if (song == null) return
+        coverJob = scope.launch {
+            val cover = CoverArt.find(song, station.name) ?: return@launch
+            if (lastSong == song) updateItem(station, song, cover)
+        }
+    }
+
+    /** Changes what the notification shows for the station playing now, without interrupting it. */
+    private fun updateItem(station: Station, song: String?, artUrl: String?) {
+        val index = exo.currentMediaItemIndex
+        val item = exo.currentMediaItem ?: return
+        if (item.mediaId != station.id) return
+        val metadata = item.mediaMetadata.buildUpon()
+            .setTitle(song ?: station.name)
+            .setArtist(if (song != null) station.name else station.description())
+            .setArtworkUri(artUrl?.let(Uri::parse))
+            .build()
+        if (metadata == item.mediaMetadata) return
+        exo.replaceMediaItem(index, item.buildUpon().setMediaMetadata(metadata).build())
     }
 
     private fun reconnect() {

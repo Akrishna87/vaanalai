@@ -123,6 +123,8 @@ class RadioViewModel(app: Application) : AndroidViewModel(app) {
     var error by mutableStateOf<String?>(null); private set
     /** The song the station says it's playing, when it says. */
     var nowPlaying by mutableStateOf<String?>(null); private set
+    /** The album cover of the song on now, when one was found. */
+    var songArt by mutableStateOf<String?>(null); private set
     var queueSize by mutableStateOf(0); private set
 
     private var controller: MediaController? = null
@@ -164,7 +166,9 @@ class RadioViewModel(app: Application) : AndroidViewModel(app) {
     private fun syncFromPlayer() {
         val c = controller ?: return
         val item = c.currentMediaItem
-        val station = item?.station() ?: item?.mediaId?.let(store::find)
+        // The saved favourite wins, so a picture just chosen for it shows straight away.
+        val station = (item?.station() ?: item?.mediaId?.let(store::find))
+            ?.let { s -> favorites.firstOrNull { it.id == s.id } ?: s }
         if (station != null) current = station
         isPlaying = c.isPlaying
         playWhenReady = c.playWhenReady
@@ -173,6 +177,11 @@ class RadioViewModel(app: Application) : AndroidViewModel(app) {
         queueSize = c.mediaItemCount
         val title = c.mediaMetadata.title?.toString()?.trim()
         nowPlaying = title?.takeIf { it.isNotEmpty() && station != null && it != station.name && it != "-" }
+        // A cover is artwork that isn't one of the station's own pictures.
+        val ownArt = setOfNotNull(station?.artworkUrl(), item?.station()?.artworkUrl(), station?.favicon)
+        songArt = c.mediaMetadata.artworkUri?.toString()?.takeIf { art ->
+            nowPlaying != null && art.startsWith("https://") && art !in ownArt
+        }
     }
 
     private fun describe(e: PlaybackException): String = when (e.errorCode) {
@@ -210,6 +219,7 @@ class RadioViewModel(app: Application) : AndroidViewModel(app) {
         current = station
         error = null
         nowPlaying = null
+        songArt = null
         val queue = list.ifEmpty { listOf(station) }.let { l -> if (l.any { it.id == station.id }) l else listOf(station) + l }
         val index = queue.indexOfFirst { it.id == station.id }.coerceAtLeast(0)
         withController { c ->
@@ -280,6 +290,50 @@ class RadioViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun moveFavorite(from: Int, to: Int) = store.moveFavorite(from, to)
+
+    /** Uses a picture from the phone's gallery for a station: copied (shrunk) into the app. */
+    fun setStationImage(station: Station, picked: android.net.Uri) {
+        val app = getApplication<Application>()
+        viewModelScope.launch {
+            val file = withContext(Dispatchers.IO) {
+                runCatching {
+                    val bytes = app.contentResolver.openInputStream(picked)?.use { it.readBytes() } ?: return@runCatching null
+                    val bitmap = Logos.decode(bytes, 512) ?: return@runCatching null
+                    val dir = java.io.File(app.filesDir, "station-images").apply { mkdirs() }
+                    // A new name each time, so the old picture isn't shown from memory.
+                    val out = java.io.File(dir, "${safeName(station.id)}-${System.currentTimeMillis()}.jpg")
+                    out.outputStream().use { bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 90, it) }
+                    deleteImage(station)
+                    out
+                }.getOrNull()
+            }
+            if (file == null) {
+                say("Couldn't use that picture.")
+                return@launch
+            }
+            val updated = station.copy(image = android.net.Uri.fromFile(file).toString())
+            store.updateStation(updated)
+            if (current?.id == station.id) current = updated
+            say("New picture for “${station.name}”.")
+        }
+    }
+
+    /** Goes back to the station's own logo. */
+    fun clearStationImage(station: Station) {
+        viewModelScope.launch(Dispatchers.IO) { deleteImage(station) }
+        val updated = station.copy(image = "")
+        store.updateStation(updated)
+        if (current?.id == station.id) current = updated
+    }
+
+    private fun deleteImage(station: Station) {
+        val path = station.image.takeIf { it.startsWith("file://") }?.let { android.net.Uri.parse(it).path } ?: return
+        val dir = java.io.File(getApplication<Application>().filesDir, "station-images").canonicalPath
+        val file = java.io.File(path)
+        if (file.canonicalPath.startsWith(dir + java.io.File.separator)) file.delete()
+    }
+
+    private fun safeName(id: String) = id.map { if (it.isLetterOrDigit() || it == '-') it else '_' }.joinToString("")
 
     fun clearRecents() = store.clearRecents()
 

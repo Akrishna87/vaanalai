@@ -139,7 +139,7 @@ private fun MiniPlayer(vm: RadioViewModel) {
             .padding(start = 8.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        StationLogo(station, 46.dp, corner = 14.dp)
+        NowPlayingArt(station, vm.songArt, 46.dp, corner = 14.dp)
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Text(station.name, style = MaterialTheme.typography.titleSmall, color = Brand.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
