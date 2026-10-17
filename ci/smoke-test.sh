@@ -141,7 +141,11 @@ grep -q "test.mp3" "$OUT/http.log" || fail "the app didn't fetch the test stream
 requests_at_start=$(grep -c "GET /test.mp3" "$OUT/http.log" || true)
 sleep 2
 for i in $(seq 1 10); do dump playing; on_screen playing "Get Lucky" && break; sleep 2; done
-on_screen playing "Get Lucky" || fail "the song the station sent isn't shown"
+if ! on_screen playing "Get Lucky"; then
+  echo "Stream server log:"; tail -5 "$OUT/http.log" || true
+  session; echo "Media session:"; grep -iE "metadata|description" "$OUT/session.txt" | head -5 || true
+  fail "the song the station sent isn't shown"
+fi
 tap playing "Get Lucky" # the mini player; opens the full player
 sleep 2
 shot 4-player

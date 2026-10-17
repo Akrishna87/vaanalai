@@ -20,6 +20,7 @@ class Station(http.server.BaseHTTPRequestHandler):
 
     def do_GET(self):
         icy = self.headers.get("Icy-MetaData") == "1"
+        sys.stderr.write("request %s asks for song names: %s\n" % (self.path, "yes" if icy else "no"))
         self.send_response(200)
         self.send_header("Content-Type", "audio/mpeg")
         self.send_header("icy-name", "Smoke Test FM")
