@@ -31,8 +31,9 @@ Each new build installs as an update over the last one.
   move to the previous or next station in the list you picked from.
 - **Shows the song that's on**, when the station sends song titles.
 - **Reconnects by itself** when the connection drops or the station's server
-  hangs up. After a long pause it jumps back to live instead of playing
-  old audio.
+  hangs up. Pressing play after a pause goes back to what's on air now
+  instead of playing old audio, and tapping **LIVE** on the full player jumps
+  to the live broadcast at any time.
 - **Sleep timer** (moon icon on the full player): stops the radio after 15
   minutes to 2 hours, fading out gently.
 - **Android Auto**: browse Favourites, Recently played and Popular stations

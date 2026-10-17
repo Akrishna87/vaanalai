@@ -133,6 +133,14 @@ shot 4-player
 dump player
 on_screen player "Close player" || fail "the full player didn't open"
 
+echo "--- Tapping LIVE jumps back to the live stream"
+before=$(grep -c "GET /test.mp3" "$OUT/http.log" || true)
+tap player "● LIVE" exact
+wait_playing 20 || fail "the station stopped after tapping LIVE"
+sleep 2
+after=$(grep -c "GET /test.mp3" "$OUT/http.log" || true)
+[ "$after" -gt "$before" ] || fail "tapping LIVE didn't reconnect to the stream ($before → $after requests)"
+
 echo "--- Keeps playing in the background"
 adb shell input keyevent KEYCODE_HOME
 sleep 8
@@ -144,8 +152,11 @@ echo "--- Media buttons"
 adb shell input keyevent KEYCODE_MEDIA_PAUSE
 sleep 3
 playing && fail "the pause button didn't pause"
+before=$(grep -c "GET /test.mp3" "$OUT/http.log" || true)
 adb shell input keyevent KEYCODE_MEDIA_PLAY
 wait_playing 20 || fail "the play button didn't resume"
+after=$(grep -c "GET /test.mp3" "$OUT/http.log" || true)
+[ "$after" -gt "$before" ] || fail "resuming after a pause didn't go back to live"
 
 echo "--- Back in the app after being closed and reopened"
 adb shell am force-stop "$PKG"

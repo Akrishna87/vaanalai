@@ -88,8 +88,14 @@ fun PlayerScreen(vm: RadioViewModel) {
         ) {
             Row(Modifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                 GlassIconButton(Icons.Rounded.KeyboardArrowDown, "Close player", onClick = { vm.showPlayer = false })
+                // Tapping the badge jumps to what's on air right now.
                 Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                    if (vm.isPlaying) Pill("● LIVE") else Pill(if (vm.isLoading) "TUNING IN" else "PAUSED", background = Color.White.copy(alpha = 0.14f), color = Color.White)
+                    val badge = Modifier.minimumInteractiveComponentSize().clip(CircleShape).clickable(onClickLabel = "Go to live", onClick = vm::goLive)
+                    if (vm.isPlaying) {
+                        Pill("● LIVE", modifier = badge)
+                    } else {
+                        Pill(if (vm.isLoading) "TUNING IN" else "PAUSED · GO LIVE", modifier = badge, background = Color.White.copy(alpha = 0.14f), color = Color.White)
+                    }
                 }
                 GlassIconButton(
                     Icons.Rounded.Bedtime,
