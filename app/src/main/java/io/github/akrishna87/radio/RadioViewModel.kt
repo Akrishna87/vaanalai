@@ -251,6 +251,17 @@ class RadioViewModel(app: Application) : AndroidViewModel(app) {
         c.play()
     }
 
+    /** Jumps to what the station is broadcasting right now (and starts playing if it was paused). */
+    fun goLive() {
+        val c = controller
+        if (c == null || c.mediaItemCount == 0) {
+            current?.let { play(it, store.lastQueue().first) }
+            return
+        }
+        error = null
+        c.sendCustomCommand(SessionCommand(PlaybackService.CMD_GO_LIVE, Bundle.EMPTY), Bundle.EMPTY)
+    }
+
     fun setSleep(minutes: Int) {
         withController { c ->
             c.sendCustomCommand(SessionCommand(PlaybackService.CMD_SLEEP, Bundle.EMPTY), Bundle().apply { putInt("minutes", minutes) })

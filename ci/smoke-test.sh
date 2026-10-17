@@ -29,8 +29,16 @@ dump() {
     # The emulator's own apps sometimes freeze while it warms up; wave the "isn't responding"
     # popup away so it doesn't cover the app.
     grep -q "isn&apos;t responding\|isn't responding" "$OUT/$1.xml" || return 0
-    echo "(dismissing a system 'isn't responding' popup)"
-    python3 "$FIND" "$OUT/$1.xml" "Wait" > /dev/null 2>&1 && adb shell input tap $(python3 "$FIND" "$OUT/$1.xml" "Wait")
+    # "Close app" ends the frozen app (usually the launcher) so the popup doesn't keep coming
+    # back; Android restarts it when it's needed. "Wait" is the fallback.
+    echo "(closing a system app that isn't responding)"
+    local button
+    for button in "Close app" "Wait"; do
+      if python3 "$FIND" "$OUT/$1.xml" "$button" exact > /dev/null 2>&1; then
+        adb shell input tap $(python3 "$FIND" "$OUT/$1.xml" "$button" exact)
+        break
+      fi
+    done
     sleep 3
   done
 }
@@ -59,6 +67,9 @@ trap 'kill $SERVER 2>/dev/null || true' EXIT
 
 adb wait-for-device
 adb install -r "$APK"
+# The emulator's launcher often freezes while it warms up and covers the app with an "isn't
+# responding" popup. It isn't needed while the app is on screen (Android restarts it on Home).
+adb shell am force-stop com.google.android.apps.nexuslauncher || true
 adb logcat -c
 
 echo "--- Opening the app"
@@ -133,6 +144,14 @@ shot 4-player
 dump player
 on_screen player "Close player" || fail "the full player didn't open"
 
+echo "--- Tapping LIVE jumps back to the live stream"
+before=$(grep -c "GET /test.mp3" "$OUT/http.log" || true)
+tap player "● LIVE" exact
+wait_playing 20 || fail "the station stopped after tapping LIVE"
+sleep 2
+after=$(grep -c "GET /test.mp3" "$OUT/http.log" || true)
+[ "$after" -gt "$before" ] || fail "tapping LIVE didn't reconnect to the stream ($before → $after requests)"
+
 echo "--- Keeps playing in the background"
 adb shell input keyevent KEYCODE_HOME
 sleep 8
@@ -144,8 +163,11 @@ echo "--- Media buttons"
 adb shell input keyevent KEYCODE_MEDIA_PAUSE
 sleep 3
 playing && fail "the pause button didn't pause"
+before=$(grep -c "GET /test.mp3" "$OUT/http.log" || true)
 adb shell input keyevent KEYCODE_MEDIA_PLAY
 wait_playing 20 || fail "the play button didn't resume"
+after=$(grep -c "GET /test.mp3" "$OUT/http.log" || true)
+[ "$after" -gt "$before" ] || fail "resuming after a pause didn't go back to live"
 
 echo "--- Back in the app after being closed and reopened"
 adb shell am force-stop "$PKG"

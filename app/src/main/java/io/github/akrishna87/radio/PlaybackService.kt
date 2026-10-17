@@ -48,6 +48,9 @@ class PlaybackService : MediaLibraryService() {
         /** Custom command: sleep timer. Arg "minutes": > 0 to stop after that long, 0 to cancel. */
         const val CMD_SLEEP = "io.github.akrishna87.radio.SLEEP"
 
+        /** Custom command: jump to what the station is broadcasting right now, and play. */
+        const val CMD_GO_LIVE = "io.github.akrishna87.radio.GO_LIVE"
+
         private const val ROOT = "root"
         private const val FOLDER_FAVORITES = "folder:favorites"
         private const val FOLDER_RECENT = "folder:recent"
@@ -55,8 +58,6 @@ class PlaybackService : MediaLibraryService() {
 
         /** Tries at reconnecting a station that dropped, before giving up and showing an error. */
         private const val MAX_RETRIES = 4
-        /** Resuming after a pause longer than this jumps back to live instead of playing old audio. */
-        private const val STALE_AFTER_MS = 30_000L
         private const val SLEEP_FADE_MS = 20_000L
     }
 
@@ -84,12 +85,9 @@ class PlaybackService : MediaLibraryService() {
         override fun seekToPrevious() = seekToPreviousMediaItem()
 
         override fun play() {
-            // A stream paused for a while has old audio waiting in its buffer; start again at live.
-            if (pausedAt > 0 && SystemClock.elapsedRealtime() - pausedAt > STALE_AFTER_MS &&
-                playbackState != Player.STATE_IDLE
-            ) {
-                reconnect()
-            }
+            // A paused stream has old audio waiting in its buffer; like other radio apps, resuming
+            // goes back to what's on air now rather than carrying on from where it stopped.
+            if (pausedAt > 0 && playbackState != Player.STATE_IDLE) goLive()
             if (playbackState == Player.STATE_IDLE || playbackState == Player.STATE_ENDED) {
                 retries = 0 // asked to try again after giving up
                 prepare()
@@ -196,6 +194,15 @@ class PlaybackService : MediaLibraryService() {
         exo.prepare()
     }
 
+    /** Back to the live broadcast: the live edge of an HLS stream, or a fresh connection otherwise. */
+    private fun goLive() {
+        if (exo.isCurrentMediaItemLive && exo.isCurrentMediaItemSeekable && exo.playbackState != Player.STATE_IDLE) {
+            exo.seekToDefaultPosition()
+        } else {
+            reconnect()
+        }
+    }
+
     private fun saveQueue() {
         val stations = (0 until exo.mediaItemCount).mapNotNull { exo.getMediaItemAt(it).station() }
         if (stations.isNotEmpty()) store.saveQueue(stations, exo.currentMediaItemIndex.coerceIn(0, stations.size - 1))
@@ -259,6 +266,7 @@ class PlaybackService : MediaLibraryService() {
             if (isOwnApp(controller)) {
                 val commands = MediaSession.ConnectionResult.DEFAULT_SESSION_AND_LIBRARY_COMMANDS.buildUpon()
                     .add(SessionCommand(CMD_SLEEP, Bundle.EMPTY))
+                    .add(SessionCommand(CMD_GO_LIVE, Bundle.EMPTY))
                     .build()
                 return MediaSession.ConnectionResult.AcceptedResultBuilder(session)
                     .setAvailableSessionCommands(commands)
@@ -361,6 +369,14 @@ class PlaybackService : MediaLibraryService() {
             }
             if (customCommand.customAction == CMD_SLEEP) {
                 setSleep(args.getInt("minutes"))
+                return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
+            }
+            if (customCommand.customAction == CMD_GO_LIVE) {
+                if (exo.mediaItemCount == 0) return Futures.immediateFuture(SessionResult(SessionResult.RESULT_ERROR_BAD_VALUE))
+                retries = 0
+                pausedAt = 0
+                goLive()
+                exo.play()
                 return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
             }
             return super.onCustomCommand(session, controller, customCommand, args)
