@@ -539,14 +539,17 @@ class PlaybackService : MediaLibraryService() {
  * the song and the play, pause and skip buttons work without unlocking.
  */
 @OptIn(UnstableApi::class)
-private class LockScreenNotifications(context: android.content.Context) : DefaultMediaNotificationProvider(context) {
+private class LockScreenNotifications(
+    context: android.content.Context,
+    private val usual: MediaNotification.Provider = DefaultMediaNotificationProvider(context),
+) : MediaNotification.Provider by usual {
     override fun createNotification(
         mediaSession: MediaSession,
         customLayout: com.google.common.collect.ImmutableList<CommandButton>,
         actionFactory: MediaNotification.ActionFactory,
         onNotificationChangedCallback: MediaNotification.Provider.Callback,
     ): MediaNotification {
-        val n = super.createNotification(mediaSession, customLayout, actionFactory, onNotificationChangedCallback)
+        val n = usual.createNotification(mediaSession, customLayout, actionFactory, onNotificationChangedCallback)
         n.notification.visibility = android.app.Notification.VISIBILITY_PUBLIC
         return n
     }
