@@ -108,6 +108,7 @@ object ArtText {
 
 /** Album covers for the song a station says is playing, from Apple's free iTunes search. */
 object CoverArt {
+    private const val TAG = "Vaanalai"
     /** Search terms → cover link ("" = looked, found none). */
     private val found = object : LinkedHashMap<String, String>(64, 0.75f, true) {
         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, String>?) = size > 300
@@ -117,9 +118,14 @@ object CoverArt {
         val terms = ArtText.searchTerms(streamTitle, stationName) ?: return null
         synchronized(found) { found[terms] }?.let { return it.ifEmpty { null } }
         val cover = withContext(Dispatchers.IO) {
-            runCatching { search(terms, streamTitle) }.getOrElse { return@withContext null } // offline: try again next time
+            runCatching { search(terms, streamTitle) }
+                .getOrElse { e ->
+                    android.util.Log.i(TAG, "Cover search failed: ${e.javaClass.simpleName}: ${e.message}")
+                    return@withContext null // offline: try again next time
+                }
                 .orEmpty()
         } ?: return null
+        android.util.Log.i(TAG, if (cover.isEmpty()) "No matching cover for “$terms”" else "Found a cover for “$terms”")
         synchronized(found) { found[terms] = cover }
         return cover.ifEmpty { null }
     }
@@ -141,6 +147,7 @@ object CoverArt {
             val r = results.optJSONObject(i) ?: continue
             val art = r.optString("artworkUrl100").takeIf { it.startsWith("https://") } ?: continue
             if (ArtText.matches(streamTitle, r.optString("artistName"), r.optString("trackName"))) return ArtText.biggerArtwork(art)
+            android.util.Log.i(TAG, "Not the song: ${r.optString("artistName")} – ${r.optString("trackName")}")
         }
         return null
     }

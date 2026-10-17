@@ -159,6 +159,7 @@ if on_screen player "Album cover"; then
   shot 4-player
 else
   echo "::warning::No album cover appeared for '$SONG' (is iTunes search reachable from the emulator?)"
+  adb logcat -d -s Vaanalai:I | tail -10 || true
 fi
 
 echo "--- Tapping LIVE jumps back to the live stream"
