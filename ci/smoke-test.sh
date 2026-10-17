@@ -82,6 +82,14 @@ echo "--- Browsing a genre"
 tap home "Tamil" exact
 sleep 6
 dump genre
+if ! on_screen genre "Back"; then
+  # A system "isn't responding" popup can swallow the tap; dump() has waved it away by now.
+  echo "(the tap didn't reach the app; trying once more)"
+  dump home-retry
+  tap home-retry "Tamil" exact
+  sleep 6
+  dump genre
+fi
 on_screen genre "Back" || fail "the genre page didn't open"
 shot 2-genre
 adb shell input keyevent KEYCODE_BACK
