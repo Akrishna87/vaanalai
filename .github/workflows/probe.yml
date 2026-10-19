@@ -9,13 +9,18 @@ jobs:
       - shell: bash {0}
         run: |
           UA="Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/124 Mobile Safari/537.36"
-          for u in "https://zeno.fm/api/stations/suryan-fm-93-5-chennai/" "https://zeno.fm/api/station/suryan-fm-93-5-chennai/" "https://zeno.fm/api/stations/a9911dff-3db9-41c0-9e65-3c80ba26d17c/"; do echo "== $u"; curl -sSL -m 20 -A "$UA" "$u" | head -c 1500; echo; done
-          echo "== radio page"; curl -sSL -m 20 -A "$UA" "https://zeno.fm/radio/suryan-fm-93-5-chennai/" -o /tmp/r; grep -oE '"(streamURL|streamUrl|stream_url|streamName|stream)"[^,]{0,140}' /tmp/r | sort -u | head; grep -oE 'https://stream[^"\\ ]{0,80}' /tmp/r | sort -u | head
-          curl -ksSL -m 20 -A "$UA" https://akashvani.gov.in/radio/live.php -o /tmp/a
+          curl -sSL -m 20 -A "$UA" "https://zeno.fm/api/stations/a9911dff-3db9-41c0-9e65-3c80ba26d17c/" -o /tmp/d
           python3 - <<'PY'
-          import re,html
-          t=open('/tmp/a',encoding='utf-8',errors='replace').read()
-          ms=list(re.finditer(r'https://air\.pc\.cdn\.bitgravity\.com/air/live/(pbaudio\d+)/playlist\.m3u8',t))
-          print("COUNT",len(ms),"UNIQUE",len({m.group(1) for m in ms}))
-          for m in ms[:3]: print("CTX",re.sub(r'\s+',' ',t[m.start()-500:m.end()+200]))
+          import json
+          d=json.load(open('/tmp/d'))
+          print("KEYS",list(d))
+          def walk(o,p=""):
+              if isinstance(o,dict):
+                  for k,v in o.items(): walk(v,p+"."+k)
+              elif isinstance(o,list):
+                  for i,v in enumerate(o[:2]): walk(v,p+f"[{i}]")
+              elif any(w in (p+str(o)).lower() for w in ("stream","country","genre","language","url","descr")) and "images.zeno" not in str(o): print(p,"=",str(o)[:120])
+          walk(d)
           PY
+          curl -sSL -m 20 -A "$UA" "https://zeno.fm/api/stations/?query=tamil&limit=1" | head -c 300; echo
+          for q in "limit=2&country=India" "limit=2&query=tamil&languages=Tamil"; do echo "== $q"; curl -sSL -m 20 -A "$UA" "https://zeno.fm/api/stations/?$q" | python3 -c 'import json,sys;d=json.load(sys.stdin);print(d.get("total"),[s["title"] for s in d["data"]])'; done
