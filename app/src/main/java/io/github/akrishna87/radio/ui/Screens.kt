@@ -258,7 +258,7 @@ fun SearchScreen(vm: RadioViewModel) {
         TextField(
             value = vm.query,
             onValueChange = vm::updateQuery,
-            placeholder = { Text("Station, city, language or genre", color = Brand.Faint) },
+            placeholder = { Text("Station, frequency, city or genre", color = Brand.Faint) },
             leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null, tint = Brand.SubText) },
             trailingIcon = {
                 if (vm.query.isNotEmpty()) {
