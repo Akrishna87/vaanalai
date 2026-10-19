@@ -4,7 +4,7 @@
 The page lists every station in a script: '276': { name: '...', image: '...', live_url: '...', page: '...' }.
 Run at build time, so the app gets the current list; on any failure the app ships without it.
 """
-import json, re, ssl, sys, urllib.request
+import json, re, ssl, sys, time, urllib.request
 
 PAGE = "https://akashvani.gov.in/radio/live.php"
 OUT = sys.argv[1]
@@ -14,7 +14,15 @@ ctx = ssl.create_default_context()
 ctx.check_hostname = False
 ctx.verify_mode = ssl.CERT_NONE
 req = urllib.request.Request(PAGE, headers={"User-Agent": "Mozilla/5.0 (Linux; Android 14) Vaanalai/1.0"})
-text = urllib.request.urlopen(req, timeout=30, context=ctx).read().decode("utf-8", "replace")
+for attempt in range(4):  # the site is often slow
+    try:
+        text = urllib.request.urlopen(req, timeout=60, context=ctx).read().decode("utf-8", "replace")
+        break
+    except Exception as e:
+        print(f"Attempt {attempt + 1}: {e}")
+        time.sleep(10)
+else:
+    sys.exit("Couldn't reach akashvani.gov.in")
 text = re.sub(r"(?<![:'\"])//[^\n]*", "", text)  # drop commented-out lines, not the // in links
 
 LINK = re.compile(r"^https://[A-Za-z0-9.-]+\.(cdn\.bitgravity\.com|wavespb\.com)/[A-Za-z0-9/_.-]+\.m3u8$")
