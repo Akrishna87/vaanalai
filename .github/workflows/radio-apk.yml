@@ -26,8 +26,8 @@ jobs:
       - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4.4.3
       - name: Fetch All India Radio's station list
         # Best effort: if akashvani.gov.in is down, the APK just ships without these stations.
-        continue-on-error: false # TEMP
-        run: python3 ci/air_stations.py app/src/main/assets/air_stations.json && ls -la app/src/main/assets
+        continue-on-error: true
+        run: python3 ci/air_stations.py app/src/main/assets/air_stations.json
       - name: Build the APK and run the unit tests
         env:
           VERSION_CODE: ${{ github.run_number }}

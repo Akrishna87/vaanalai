@@ -4,7 +4,7 @@
 The page lists every station in a script: '276': { name: '...', image: '...', live_url: '...', page: '...' }.
 Run at build time, so the app gets the current list; on any failure the app ships without it.
 """
-import json, re, ssl, sys, time, urllib.request
+import json, os, re, ssl, sys, time, urllib.request
 
 PAGE = "https://akashvani.gov.in/radio/live.php"
 OUT = sys.argv[1]
@@ -40,6 +40,7 @@ for m in re.finditer(r"'(\d+)'\s*:\s*\{([^{}]*)\}", text):
 
 if len(stations) < 50:
     sys.exit(f"Only found {len(stations)} stations; the page has probably changed.")
+os.makedirs(os.path.dirname(OUT) or ".", exist_ok=True)
 with open(OUT, "w", encoding="utf-8") as f:
     json.dump(stations, f, ensure_ascii=False, separators=(",", ":"))
 print(f"Saved {len(stations)} All India Radio stations")
