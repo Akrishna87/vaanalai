@@ -113,9 +113,18 @@ object RadioBrowser {
             "reverse" to "true",
             "limit" to 60,
         )
+        val freq = Frequency.find(query)
         val byName = async { stations(common + mapOf("name" to query)) }
         val byTag = async { runCatching { stations(common + mapOf("tag" to query.trim().lowercase(Locale.ROOT), "limit" to 30)) }.getOrDefault(emptyList()) }
-        (byName.await() + byTag.await()).distinctBy { it.name.lowercase(Locale.ROOT) }
+        // Stations often put their frequency in the name ("Radio Mirchi 98.3 FM").
+        val byFreq = async {
+            if (freq == null) emptyList()
+            else runCatching { stations(common + mapOf("name" to freq.mhz)) }.getOrDefault(emptyList())
+                .filter { Frequency.inName(it.name, freq.mhz) }
+        }
+        // "mirchi 98.3": stations on 98.3 named Mirchi first, then the rest on 98.3.
+        val (both, onlyFreq) = byFreq.await().partition { s -> freq!!.words.all { it in s.name.lowercase(Locale.ROOT) } }
+        (both + byName.await() + onlyFreq + byTag.await()).distinctBy { it.name.lowercase(Locale.ROOT) }
     }
 
     /** Countries that have working stations, those with the most first. */
@@ -140,5 +149,37 @@ object RadioBrowser {
     suspend fun countPlay(stationId: String) {
         if (stationId.startsWith(Station.CUSTOM_PREFIX)) return
         runCatching { get("url/${URLEncoder.encode(stationId, "UTF-8")}", emptyMap()) }
+    }
+}
+
+/** FM frequencies typed into search: "98.3", "98,3 FM", "983" or "104 fm". */
+object Frequency {
+    data class Found(val mhz: String, val words: List<String>)
+
+    private val NUMBER = Regex("""(?<![\d.,])(\d{2,4})(?:[.,](\d))?(?![\d.,])\s*(fm|mhz)?""", RegexOption.IGNORE_CASE)
+
+    /** The FM frequency in [query] and the other words around it, or null when there's none. */
+    fun find(query: String): Found? {
+        for (m in NUMBER.findAll(query)) {
+            val (whole, tenth, unit) = m.destructured
+            // "983" is 98.3 and "1064" is 106.4; a bare "104" is a number, but "104 fm" is 104 FM.
+            val tries = when {
+                tenth.isNotEmpty() -> if (whole.length <= 3) listOf("$whole.$tenth") else emptyList()
+                unit.isNotEmpty() -> listOf(whole, whole.dropLast(1) + "." + whole.last())
+                whole.length >= 3 -> listOf(whole.dropLast(1) + "." + whole.last())
+                else -> emptyList()
+            }
+            val mhz = tries.firstOrNull { (it.toDoubleOrNull() ?: 0.0) in 87.5..108.0 } ?: continue
+            val words = query.removeRange(m.range).lowercase().split(Regex("""\W+""")).filter { it.length >= 2 && it != "fm" }
+            return Found(mhz.removeSuffix(".0"), words)
+        }
+        return null
+    }
+
+    /** Whether a station's name carries [mhz], so 98.3 doesn't match 198.3 or 98.35. */
+    fun inName(name: String, mhz: String): Boolean {
+        val pattern = mhz.replace(".", "[.,]") // only digits and a dot
+        val tail = if ('.' in mhz) """(?![\d])""" else """(?![.,]?\d)"""
+        return Regex("""(?<![\d.,])$pattern$tail""").containsMatchIn(name)
     }
 }
