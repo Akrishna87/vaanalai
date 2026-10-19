@@ -34,8 +34,12 @@ enum class Tab(val label: String) { HOME("Home"), SEARCH("Search"), FAVORITES("F
 /** A genre or language to browse, and the directory tag behind it. */
 data class Genre(val label: String, val tag: String, val emoji: String = "🎧")
 
+/** Not a directory tag: opens All India Radio's own stations. */
+const val AIR_TAG = "air:all"
+
 val GENRES = listOf(
     Genre("Tamil", "tamil", "🌺"),
+    Genre("All India Radio", AIR_TAG, "📡"),
     Genre("Hindi", "hindi", "🪔"),
     Genre("Bollywood", "bollywood", "🎬"),
     Genre("Malayalam", "malayalam", "🌴"),
@@ -417,6 +421,10 @@ class RadioViewModel(app: Application) : AndroidViewModel(app) {
         val before = if (more) genreList.stations else emptyList()
         genreList = genreList.copy(stations = before, loading = true, error = null)
         val code = if (genreWorldwide) "" else countryCode
+        if (g.tag == AIR_TAG) {
+            genreList = StationList(AllIndiaRadio.stations(), canLoadMore = false)
+            return
+        }
         genreJob = viewModelScope.launch {
             genreList = fetch(before) { RadioBrowser.byTag(g.tag, code, offset = before.size, limit = PAGE) }
         }

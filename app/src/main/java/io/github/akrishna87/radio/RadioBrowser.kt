@@ -124,7 +124,12 @@ object RadioBrowser {
         }
         // "mirchi 98.3": stations on 98.3 named Mirchi first, then the rest on 98.3.
         val (both, onlyFreq) = byFreq.await().partition { s -> freq!!.words.all { it in s.name.lowercase(Locale.ROOT) } }
-        (both + byName.await() + onlyFreq + byTag.await()).distinctBy { it.name.lowercase(Locale.ROOT) }
+        val zeno = async { runCatching { ZenoFm.search(query.trim(), countryCode) }.getOrDefault(emptyList()) }
+        val air = if (countryCode.isEmpty() || countryCode == "IN") {
+            if (freq == null) AllIndiaRadio.search(query) else AllIndiaRadio.stations().filter { Frequency.inName(it.name, freq.mhz) }
+        } else emptyList()
+        // The directory's matches first, then All India Radio's and Zeno.fm's, then tag matches.
+        (both + byName.await() + air + zeno.await() + onlyFreq + byTag.await()).distinctBy { it.name.lowercase(Locale.ROOT) }
     }
 
     /** Countries that have working stations, those with the most first. */
@@ -147,7 +152,7 @@ object RadioBrowser {
      * "most popular" order meaningful. Best effort only.
      */
     suspend fun countPlay(stationId: String) {
-        if (stationId.startsWith(Station.CUSTOM_PREFIX)) return
+        if (':' in stationId) return // added by hand, or from All India Radio or Zeno.fm
         runCatching { get("url/${URLEncoder.encode(stationId, "UTF-8")}", emptyMap()) }
     }
 }
