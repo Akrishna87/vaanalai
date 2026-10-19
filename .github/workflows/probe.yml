@@ -1,0 +1,16 @@
+name: Probe sources
+on: push
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - shell: bash {0}
+        run: |
+          python3 --version; python3 ci/air_stations.py /tmp/air.json 2>&1 | tail -5
+          curl -ksSL -m 30 https://akashvani.gov.in/radio/live.php -o /tmp/a; python3 -c "
+          import re;t=open('/tmp/a',encoding='utf-8',errors='replace').read()
+          print(len(re.findall(r\"'(\d+)'\s*:\s*\{\",t)))
+          m=re.search(r\"'(\d+)'\s*:\s*\{\",t); print(repr(t[m.start():m.start()+400]))"
