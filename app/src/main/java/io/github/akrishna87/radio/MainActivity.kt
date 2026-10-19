@@ -21,6 +21,7 @@ class MainActivity : ComponentActivity() {
         )
         super.onCreate(savedInstanceState)
         WebsiteIcons.init(this)
+        AllIndiaRadio.init(this)
         // Android 13+ asks once, so the player's controls can show on the lock screen.
         if (savedInstanceState == null && Build.VERSION.SDK_INT >= 33 &&
             checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
