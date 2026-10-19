@@ -6,15 +6,15 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
-      - run: |
+      - shell: bash {0}
+        run: |
           UA="Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/124 Mobile Safari/537.36"
-          h() { echo "== $1"; curl -sSL -m 20 -A "$UA" -o /tmp/b -w "HTTP %{http_code} %{content_type} %{size_download}B\n" "$1"; head -c "${2:-600}" /tmp/b | tr -d '\r'; echo; }
-          for u in "https://zeno.fm/api/stations/?query=tamil&limit=3" "https://api.zeno.fm/mobile/v2/stations/search?query=tamil" "https://zeno.fm/api/v2/stations/search?query=tamil" "https://api.zeno.fm/api/v2/stations?query=tamil"; do h "$u"; done
-          echo "== zeno search page clues"; curl -sSL -m 20 -A "$UA" "https://zeno.fm/search/?query=tamil" -o /tmp/z; wc -c /tmp/z
-          grep -oiE '(algolia[a-z]*|appId|apiKey|indexName)["'"'"':= ]{1,4}[A-Za-z0-9_-]{4,40}' /tmp/z | sort -u | head -20
-          grep -oE 'https://[a-z0-9.-]*zeno[a-z0-9.-]*/[A-Za-z0-9/_?=&.-]{0,60}' /tmp/z | sort -u | head -30
-          for s in $(grep -oE '/_next/static/[^"]+\.js' /tmp/z | sort -u | head -40); do curl -sSL -m 15 "https://zeno.fm$s"; done > /tmp/js; wc -c /tmp/js
-          grep -oiE '(algolia|applicationId|appId|apiKey|indexName|searchKey)["'"'"':= ]{1,4}"?[A-Za-z0-9_-]{6,40}' /tmp/js | sort -u | head -20
-          grep -oE 'https://[a-z0-9.-]+/(api|v[0-9])[A-Za-z0-9/_${}-]{0,60}' /tmp/js | sort -u | head -30
-          for p in https://akashvani.gov.in/radio/live.php https://newsonair.gov.in/live-radio/ https://www.newsonair.gov.in/live-radio https://prasarbharati.gov.in/livestreaming-services/; do echo "== $p"; curl -sSL -m 20 -A "$UA" "$p" -o /tmp/a -w "HTTP %{http_code} %{size_download}B\n"; grep -oE 'https?://[^"'"'"' <>]+\.(m3u8|mp3|aac)[^"'"'"' <>]*' /tmp/a | sort -u | head -15; grep -oE 'https?://[^"'"'"' <>]*(json|api)[^"'"'"' <>]*' /tmp/a | sort -u | head -10; done
-          for id in 001 002 003 016 ragam; do h "https://airhlspush.pc.cdn.bitgravity.com/httppush/hlspbaudio$id/hlspbaudio${id}64kbps.m3u8" 200; done
+          curl -sSL -m 20 -A "$UA" "https://zeno.fm/api/stations/?query=suryan&limit=2" | python3 -c '
+          import json,sys; d=json.load(sys.stdin)
+          print("TOP KEYS", [k for k in d if k!="data"], {k:d[k] for k in d if k!="data"})
+          for s in d["data"][:2]:
+              print({k:(v if not isinstance(v,dict) else {kk:str(vv)[:80] for kk,vv in v.items()}) for k,v in s.items()})'
+          echo "== page 2"; curl -sS -m 20 -A "$UA" -o /dev/null -w "%{http_code}\n" "https://zeno.fm/api/stations/?query=tamil&limit=3&page=2"
+          echo "== stream"; curl -sS -m 10 -A "$UA" -r 0-1000 -o /dev/null -D - "https://stream.zeno.fm/$(curl -sS -A "$UA" 'https://zeno.fm/api/stations/?query=tamil&limit=1' | python3 -c 'import json,sys;s=json.load(sys.stdin)["data"][0];print(s.get("streamName") or s.get("slug"))')" | head -12
+          for p in https://akashvani.gov.in/radio/live.php https://newsonair.gov.in/live-radio/ https://prasarbharati.gov.in/livestreaming-services/ https://akashvani.gov.in/; do echo "== $p"; curl -ksSL -m 20 -A "$UA" "$p" -o /tmp/a -w "HTTP %{http_code} %{size_download}B\n"; grep -oE 'https?://[^"'"'"' <>]+\.(m3u8|mp3|aac|pls)[^"'"'"' <>]*' /tmp/a | sort -u | head -12; grep -oiE '[^"'"'"' <>]*(stream|live|channel)[^"'"'"' <>]*\.(php|json)[^"'"'"' <>]*' /tmp/a | sort -u | head -10; done
+          for id in 001 002 016 ragam; do u="https://airhlspush.pc.cdn.bitgravity.com/httppush/hlspbaudio$id/hlspbaudio${id}64kbps.m3u8"; echo "$u $(curl -sS -m 10 -o /dev/null -w %{http_code} $u)"; done
