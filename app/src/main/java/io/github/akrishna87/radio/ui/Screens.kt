@@ -1,5 +1,9 @@
 package io.github.akrishna87.radio.ui
 
+import android.content.ActivityNotFoundException
+import android.content.Intent
+import android.speech.RecognizerIntent
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -28,6 +32,7 @@ import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Clear
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.MoreHoriz
+import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -39,6 +44,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -253,6 +259,25 @@ fun SearchScreen(vm: RadioViewModel) {
     val focus = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
     LaunchedEffect(Unit) { if (vm.query.isEmpty()) runCatching { focus.requestFocus() } }
+    val context = LocalContext.current
+    // Voice search: the phone's own speech recogniser (Google's on most phones) turns speech into text.
+    val listen = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()?.let {
+            vm.updateQuery(it)
+            focusManager.clearFocus()
+        }
+    }
+    fun startListening() {
+        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+            .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            .putExtra(RecognizerIntent.EXTRA_LANGUAGE, "en-IN") // Indian English hears names like Suryan or Mirchi best
+            .putExtra(RecognizerIntent.EXTRA_PROMPT, "Say a station, frequency or city")
+        try {
+            listen.launch(intent)
+        } catch (e: ActivityNotFoundException) {
+            Toast.makeText(context, "Voice search isn't available on this phone", Toast.LENGTH_SHORT).show()
+        }
+    }
     Column(Modifier.fillMaxSize()) {
         PageTitle("Search")
         TextField(
@@ -263,6 +288,8 @@ fun SearchScreen(vm: RadioViewModel) {
             trailingIcon = {
                 if (vm.query.isNotEmpty()) {
                     IconButton(onClick = { vm.updateQuery("") }) { Icon(Icons.Rounded.Clear, contentDescription = "Clear", tint = Brand.SubText) }
+                } else {
+                    IconButton(onClick = { startListening() }) { Icon(Icons.Rounded.Mic, contentDescription = "Search by voice", tint = Brand.Pink) }
                 }
             },
             singleLine = true,
